@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Barrio | Lagouarde</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root { --azul:#0d2b45; }
+
+    body {
+      margin: 0;
+      font-family: Montserrat, sans-serif;
+      background: #f2f4f7;
+      color: #222;
+    }
+
+    header {
+      background: var(--azul);
+      padding: 18px 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    header img { height: 60px; }
+
+    .mapa-container {
+      position: relative;
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 0 14px;
+    }
+
+    .mapa-container img {
+      width: 100%;
+      border-radius: 18px;
+      display: block;
+    }
+
+    /* 🔵 CÍRCULOS CLICKABLES — PROPORCIONALES Y ELEGANTES */
+    .lote-point {
+      position: absolute;
+      width: clamp(9px, 1.1vw, 14px);
+      height: clamp(9px, 1.1vw, 14px);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      box-shadow:
+        0 0 0 2px rgba(255,255,255,0.9),
+        0 6px 14px rgba(0,0,0,0.25);
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+
+    .lote-point:hover {
+      transform: translate(-50%, -50%) scale(1.25);
+      box-shadow:
+        0 0 0 3px rgba(255,255,255,1),
+        0 10px 22px rgba(0,0,0,0.35);
+    }
+
+    .lote-disponible { background: #2ecc71; }
+    .lote-reservado { background: #f1c40f; }
+    .lote-vendido { background: #e74c3c; }
+
+    /* 🪟 MODAL LOTE */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+
+    .info-lote {
+      background: white;
+      border-radius: 18px;
+      max-width: 380px;
+      width: 90%;
+      padding: 22px 24px;
+      box-shadow: 0 22px 40px rgba(0,0,0,.35);
+      position: relative;
+      animation: aparecer .25s ease;
+    }
+
+    @keyframes aparecer {
+      from { transform: scale(.9); opacity:0; }
+      to { transform: scale(1); opacity:1; }
+    }
+
+    .info-lote h3 { margin-top:0; color:var(--azul); }
+    .info-lote p { margin:6px 0; font-size:14.5px; }
+
+    .info-lote img {
+      width:100%;
+      border-radius:12px;
+      margin-top:10px;
+    }
+
+    .cerrar {
+      position:absolute;
+      top:12px;
+      right:14px;
+      font-size:20px;
+      cursor:pointer;
+      font-weight:700;
+      color:#777;
+    }
+
+    @media (max-width:600px) {
+      header img { height: 46px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="logo.png" alt="Lagouarde">
+</header>
+
+<div class="mapa-container">
+  <img id="mapaBarrio" alt="Mapa del barrio">
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="info-lote" id="infoLote">
+    <div class="cerrar" onclick="cerrarLote()">✕</div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const barrio = BARRIOS.find(b => b.id == params.get('id'));
+
+  const mapa = document.getElementById('mapaBarrio');
+  const contenedor = document.querySelector('.mapa-container');
+  const overlay = document.getElementById('overlay');
+  const info = document.getElementById('infoLote');
+
+  mapa.src = barrio.imagenMapa;
+
+  barrio.lotes.forEach(lote => {
+    const p = document.createElement('div');
+    p.className = 'lote-point lote-' + lote.estado.toLowerCase();
+    p.style.left = lote.x + '%';
+    p.style.top = lote.y + '%';
+
+    p.onclick = () => {
+      overlay.style.display = 'flex';
+      info.innerHTML = `
+        <div class="cerrar" onclick="cerrarLote()">✕</div>
+        <h3>Lote ${lote.numero}</h3>
+        <p><strong>Metros:</strong> ${lote.metros}</p>
+        <p><strong>Precio:</strong> ${lote.precio}</p>
+        ${lote.financiacion ? `<p><strong>Financiación:</strong> ${lote.financiacion}</p>` : ''}
+        ${lote.imagen ? `<img src="${lote.imagen}">` : ''}
+      `;
+    };
+
+    contenedor.appendChild(p);
+  });
+
+  function cerrarLote() {
+    overlay.style.display = 'none';
+  }
+</script>
+
+</body>
+</html>

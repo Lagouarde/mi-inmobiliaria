@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin | Lagouarde</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root { --azul:#0d2b45; }
+
+    body {
+      margin:0;
+      font-family:Montserrat,sans-serif;
+      background:#f2f4f7;
+      color:#222;
+    }
+
+    main {
+      max-width:1200px;
+      margin:auto;
+      padding:40px 16px 80px;
+    }
+
+    h1, h2 { color:var(--azul); }
+
+    section {
+      background:#fff;
+      border-radius:18px;
+      padding:24px;
+      margin-bottom:28px;
+      box-shadow:0 8px 22px rgba(0,0,0,.08);
+    }
+
+    label {
+      font-weight:600;
+      display:block;
+      margin-top:14px;
+    }
+
+    input, textarea, select, button {
+      width:100%;
+      padding:10px 12px;
+      margin-top:6px;
+      border-radius:8px;
+      border:1px solid #ccc;
+      font-size:14px;
+    }
+
+    button {
+      background:var(--azul);
+      color:#fff;
+      font-weight:600;
+      cursor:pointer;
+      margin-top:16px;
+    }
+
+    button:hover { opacity:.9; }
+
+    ul { padding-left:18px; }
+
+    .danger {
+      background:#c0392b;
+      width:auto;
+      padding:6px 10px;
+      font-size:12px;
+      margin-left:10px;
+    }
+
+    /* MAPA */
+    .mapa-container {
+      margin-top:20px;
+      border-radius:18px;
+      overflow:hidden;
+      background:#ddd;
+    }
+
+    .mapa-wrapper {
+      position:relative;
+      width:100%;
+    }
+
+    .mapa-wrapper img {
+      width:100%;
+      height:auto;
+      display:block;
+    }
+
+    .punto {
+      position:absolute;
+      transform:translate(-50%,-50%);
+      width:16px;
+      height:16px;
+      border-radius:50%;
+      border:2px solid #fff;
+      box-shadow:0 0 0 3px rgba(0,0,0,.15);
+      pointer-events:none;
+    }
+
+    .Disponible { background:#2ecc71; }
+    .Reservado { background:#f1c40f; }
+    .Vendido { background:#e74c3c; }
+
+    pre {
+      background:#111;
+      color:#0f0;
+      padding:16px;
+      border-radius:12px;
+      font-size:12px;
+      overflow-x:auto;
+    }
+  </style>
+</head>
+<body>
+
+<main>
+  <h1>Panel de Administración</h1>
+
+  <!-- CREAR BARRIO -->
+  <section>
+    <h2>Crear barrio</h2>
+
+    <label>Nombre</label>
+    <input id="nombreBarrio">
+
+    <label>Descripción</label>
+    <textarea id="descBarrio"></textarea>
+
+    <label>Imagen / mapa del barrio (ruta o URL)</label>
+    <input id="imgBarrio" placeholder="ej: rincon-verde.jpg">
+
+    <button onclick="crearBarrio()">Agregar barrio</button>
+  </section>
+
+  <!-- LISTADO BARRIOS -->
+  <section>
+    <h2>Barrios cargados</h2>
+    <ul id="listaBarrios"></ul>
+  </section>
+
+  <!-- CREAR LOTE -->
+  <section>
+    <h2>Agregar lote</h2>
+
+    <label>Barrio</label>
+    <select id="selectBarrio" onchange="cargarMapa()"></select>
+
+    <label>Número</label>
+    <input id="numLote">
+
+    <label>Metros</label>
+    <input id="metrosLote">
+
+    <label>Precio</label>
+    <input id="precioLote">
+
+    <label>Financiación (opcional)</label>
+    <input id="finLote">
+
+    <label>Imagen del lote (opcional)</label>
+    <input id="imgLote">
+
+    <label>Estado</label>
+    <select id="estadoLote">
+      <option>Disponible</option>
+      <option>Reservado</option>
+      <option>Vendido</option>
+    </select>
+
+    <p><strong>Click en el mapa para ubicar el lote</strong></p>
+
+    <div class="mapa-container">
+      <div class="mapa-wrapper" id="mapaWrapper">
+        <img id="mapaBarrio" alt="Mapa del barrio">
+      </div>
+    </div>
+
+    <button onclick="crearLote()">Agregar lote</button>
+  </section>
+
+  <!-- EXPORTAR -->
+  <section>
+    <h2>Exportar data.js</h2>
+    <button onclick="exportar()">Generar data.js</button>
+    <pre id="output"></pre>
+  </section>
+</main>
+
+<script src="data.js"></script>
+<script>
+  let x = null, y = null;
+
+  const listaBarrios = document.getElementById('listaBarrios');
+  const selectBarrio = document.getElementById('selectBarrio');
+  const mapaBarrio = document.getElementById('mapaBarrio');
+  const mapaWrapper = document.getElementById('mapaWrapper');
+
+  function refrescar() {
+    listaBarrios.innerHTML = '';
+    selectBarrio.innerHTML = '';
+
+    BARRIOS.forEach(b => {
+      const li = document.createElement('li');
+      li.innerHTML = `${b.nombre} <button class="danger" onclick="borrarBarrio(${b.id})">Eliminar</button>`;
+      listaBarrios.appendChild(li);
+
+      const opt = document.createElement('option');
+      opt.value = b.id;
+      opt.textContent = b.nombre;
+      selectBarrio.appendChild(opt);
+    });
+
+    cargarMapa();
+  }
+
+  function crearBarrio() {
+    if (!nombreBarrio.value || !imgBarrio.value) return alert('Completá nombre e imagen');
+
+    BARRIOS.push({
+      id: Date.now(),
+      nombre: nombreBarrio.value,
+      descripcion: descBarrio.value,
+      imagenMapa: imgBarrio.value,
+      lotes: []
+    });
+
+    nombreBarrio.value = descBarrio.value = imgBarrio.value = '';
+    refrescar();
+  }
+
+  function borrarBarrio(id) {
+    const i = BARRIOS.findIndex(b => b.id === id);
+    if (i >= 0) BARRIOS.splice(i, 1);
+    refrescar();
+  }
+
+  function cargarMapa() {
+    mapaWrapper.querySelectorAll('.punto').forEach(p => p.remove());
+    const barrio = BARRIOS.find(b => b.id == selectBarrio.value);
+    if (!barrio) return;
+
+    mapaBarrio.src = barrio.imagenMapa;
+    mapaBarrio.onload = () => {
+      barrio.lotes.forEach(l => dibujarPunto(l));
+    };
+  }
+
+  mapaWrapper.addEventListener('click', e => {
+    const rect = mapaBarrio.getBoundingClientRect();
+    x = ((e.clientX - rect.left) / rect.width) * 100;
+    y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    const temp = document.createElement('div');
+    temp.className = 'punto Disponible';
+    temp.style.left = x + '%';
+    temp.style.top = y + '%';
+
+    mapaWrapper.querySelectorAll('.temp').forEach(p => p.remove());
+    temp.classList.add('temp');
+    mapaWrapper.appendChild(temp);
+  });
+
+  function dibujarPunto(l) {
+    const p = document.createElement('div');
+    p.className = `punto ${l.estado}`;
+    p.style.left = l.x + '%';
+    p.style.top = l.y + '%';
+    mapaWrapper.appendChild(p);
+  }
+
+  function crearLote() {
+    const barrio = BARRIOS.find(b => b.id == selectBarrio.value);
+    if (!barrio || x === null) return alert('Elegí una ubicación en el mapa');
+
+    const lote = {
+      numero: numLote.value,
+      metros: metrosLote.value,
+      precio: precioLote.value,
+      financiacion: finLote.value || null,
+      imagen: imgLote.value || null,
+      estado: estadoLote.value,
+      x, y
+    };
+
+    barrio.lotes.push(lote);
+    dibujarPunto(lote);
+
+    numLote.value = metrosLote.value = precioLote.value = finLote.value = imgLote.value = '';
+    x = y = null;
+  }
+
+  function exportar() {
+    output.textContent = 'const BARRIOS = ' + JSON.stringify(BARRIOS, null, 2) + ';';
+  }
+
+  refrescar();
+</script>
+</body>
+</html>

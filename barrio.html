@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Barrio | Lagouarde</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Montserrat, sans-serif;
+      background: #f2f4f7;
+      color: #222;
+    }
+
+    header {
+      background: #0d2b45;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: auto;
+      padding: 30px 20px 80px;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .descripcion {
+      font-size: 16px;
+      max-width: 800px;
+      margin: 0 auto 30px;
+      text-align: center;
+    }
+
+    .mapa-container {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      margin: auto;
+    }
+
+    .mapa-container img {
+      width: 100%;
+      border-radius: 16px;
+      display: block;
+    }
+
+    .lote {
+      position: absolute;
+      width: clamp(12px, 2.5vw, 18px);
+      height: clamp(12px, 2.5vw, 18px);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      border: 2px solid white;
+      box-shadow: 0 0 8px rgba(0,0,0,.4);
+    }
+
+    .Disponible { background: #27ae60; }
+    .Reservado { background: #f39c12; }
+    .Vendido { background: #c0392b; }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .card {
+      background: white;
+      border-radius: 18px;
+      max-width: 420px;
+      width: 90%;
+      padding: 24px;
+      position: relative;
+      animation: aparecer .25s ease;
+    }
+
+    .card img {
+      width: 100%;
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+
+    .cerrar {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    @keyframes aparecer {
+      from { transform: scale(.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1 id="titulo"></h1>
+</header>
+
+<main>
+  <p id="descripcion" class="descripcion"></p>
+
+  <div class="mapa-container">
+    <img id="mapa">
+  </div>
+</main>
+
+<div class="overlay" id="overlay">
+  <div class="card" id="card"></div>
+</div>
+
+<script src="data.js"></script>
+<script>
+  const id = new URLSearchParams(location.search).get('id');
+  const barrio = BARRIOS.find(b => b.id == id);
+
+  if (!barrio) {
+    document.body.innerHTML = 'Barrio no encontrado';
+    throw new Error('Barrio no encontrado');
+  }
+
+  titulo.textContent = barrio.nombre;
+  descripcion.textContent = barrio.descripcion;
+  mapa.src = barrio.imagenMapa;
+
+  barrio.lotes.forEach(lote => {
+    const d = document.createElement('div');
+    d.className = `lote ${lote.estado}`;
+    d.style.left = lote.x + '%';
+    d.style.top = lote.y + '%';
+
+    d.onclick = () => mostrarLote(lote);
+    document.querySelector('.mapa-container').appendChild(d);
+  });
+
+  function mostrarLote(lote) {
+    overlay.style.display = 'flex';
+
+    card.innerHTML = `
+      <span class="cerrar" onclick="cerrar()">✕</span>
+      <h3>Lote ${lote.numero}</h3>
+      <p><strong>Superficie:</strong> ${lote.metros} m²</p>
+      <p><strong>Precio:</strong> ${lote.precio}</p>
+      ${lote.financiacion ? `<p><strong>Financiación:</strong> ${lote.financiacion}</p>` : ''}
+      ${lote.imagen ? `<img src="${lote.imagen}">` : ''}
+    `;
+  }
+
+  function cerrar() {
+    overlay.style.display = 'none';
+  }
+</script>
+
+</body>
+</html>

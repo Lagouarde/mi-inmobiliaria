@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Barrio | Lagouarde</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Montserrat, sans-serif;
+      background: #f2f4f7;
+      color: #222;
+    }
+
+    header {
+      background: #0d2b45;
+      padding: 22px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    header img {
+      height: 70px;
+    }
+
+    .mapa-container {
+      position: relative;
+      max-width: 1100px;
+      margin: 30px auto 60px;
+      padding: 0 16px;
+    }
+
+    .mapa-container img {
+      width: 100%;
+      display: block;
+      border-radius: 16px;
+    }
+
+    .lote-point {
+      position: absolute;
+      width: 1.8vw;
+      height: 1.8vw;
+      max-width: 18px;
+      max-height: 18px;
+      min-width: 12px;
+      min-height: 12px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      cursor: pointer;
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.7);
+    }
+
+    .lote-Disponible { background: #2ecc71; }
+    .lote-Reservado { background: #f1c40f; }
+    .lote-Vendido { background: #e74c3c; }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+    }
+
+    .info-lote {
+      background: white;
+      padding: 24px 26px;
+      border-radius: 18px;
+      max-width: 360px;
+      width: 90%;
+      position: relative;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+      animation: aparecer .25s ease;
+    }
+
+    @keyframes aparecer {
+      from { transform: scale(.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .cerrar {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      font-size: 22px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .info-lote h3 {
+      margin: 0 0 10px;
+      color: #0d2b45;
+    }
+
+    .info-lote p {
+      margin: 6px 0;
+      font-size: 14.5px;
+    }
+
+    .info-lote img {
+      width: 100%;
+      margin-top: 12px;
+      border-radius: 12px;
+    }
+
+    @media (max-width: 600px) {
+      header img { height: 50px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="logo.png" alt="Lagouarde">
+</header>
+
+<div class="mapa-container">
+  <img id="mapaBarrio" alt="Mapa del barrio">
+</div>
+
+<div id="overlay" class="overlay">
+  <div class="info-lote" id="infoLote">
+    <div class="cerrar" onclick="cerrarLote()">✕</div>
+  </div>
+</div>
+
+<script src="data.js?v=5"></script>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const barrioId = parseInt(params.get('id'));
+  const barrio = BARRIOS.find(b => b.id === barrioId);
+
+  const mapa = document.getElementById('mapaBarrio');
+  const overlay = document.getElementById('overlay');
+  const info = document.getElementById('infoLote');
+
+  if (!barrio) {
+    alert('Barrio no encontrado');
+  } else {
+    mapa.src = barrio.imagenMapa;
+
+    barrio.lotes.forEach(lote => {
+      const punto = document.createElement('div');
+      punto.className = 'lote-point lote-' + lote.estado;
+      punto.style.left = lote.x + '%';
+      punto.style.top = lote.y + '%';
+
+      punto.onclick = () => {
+        overlay.style.display = 'flex';
+        info.innerHTML = `
+          <div class="cerrar" onclick="cerrarLote()">✕</div>
+          <h3>Lote ${lote.numero}</h3>
+          <p><strong>Metros:</strong> ${lote.metros}</p>
+          <p><strong>Precio:</strong> ${lote.precio}</p>
+          ${lote.financiacion ? `<p><strong>Financiación:</strong> ${lote.financiacion}</p>` : ''}
+          ${lote.imagen ? `<img src="${lote.imagen}" alt="Lote">` : ''}
+        `;
+      };
+
+      document.querySelector('.mapa-container').appendChild(punto);
+    });
+  }
+
+  function cerrarLote() {
+    overlay.style.display = 'none';
+  }
+</script>
+
+</body>
+</html>

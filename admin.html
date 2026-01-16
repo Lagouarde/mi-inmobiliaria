@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Panel de administración</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;background:#f3f5f7;margin:0;padding:0}
+header{background:#0d3b66;color:#fff;padding:15px}
+.container{max-width:1200px;margin:auto;padding:20px}
+.panel{background:#fff;border-radius:8px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+select,input,button{padding:8px;font-size:14px}
+button{cursor:pointer;background:#0d3b66;color:#fff;border:none;border-radius:4px}
+button:hover{background:#12518a}
+.lote{border-bottom:1px solid #ddd;padding:6px 0;display:flex;justify-content:space-between;align-items:center}
+form label{display:block;margin-top:8px}
+textarea{width:100%;height:80px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h2>Panel de administración</h2></header>
+<div class="container">
+<div class="panel">
+
+<h3>Cargar data.js</h3>
+<input type="file" id="fileInput" accept=".js" />
+
+<div class="grid" style="margin-top:20px;display:none" id="adminPanel">
+
+<div>
+<h3>Barrios</h3>
+<select id="barrioSelect"></select>
+
+<h3 style="margin-top:15px">Lotes</h3>
+<div id="lotesList"></div>
+</div>
+
+<div>
+<h3>Editar lote</h3>
+<form id="loteForm">
+<input type="hidden" id="loteIndex" />
+<label>Número <input id="numero" /></label>
+<label>Metros <input id="metros" /></label>
+<label>Precio <input id="precio" /></label>
+<label>Financiación <input id="financiacion" /></label>
+<label>Estado
+<select id="estado">
+<option>Disponible</option>
+<option>Vendido</option>
+</select></label>
+<br>
+<button type="submit">Guardar cambios</button>
+</form>
+
+<h3 style="margin-top:20px">Exportar nuevo data.js</h3>
+<button onclick="exportar()">Descargar data.js</button>
+</div>
+
+</div>
+</div>
+</div>
+
+<script>
+let DATA = [];
+let barrioActual = 0;
+
+const fileInput = document.getElementById('fileInput');
+fileInput.addEventListener('change', e => {
+ const file = e.target.files[0];
+ const reader = new FileReader();
+ reader.onload = () => {
+   const text = reader.result.replace('const BARRIOS =','').trim();
+   DATA = eval(text);
+   document.getElementById('adminPanel').style.display='grid';
+   cargarBarrios();
+ };
+ reader.readAsText(file);
+});
+
+function cargarBarrios(){
+ const sel = document.getElementById('barrioSelect');
+ sel.innerHTML='';
+ DATA.forEach((b,i)=>{
+   const o=document.createElement('option');
+   o.value=i;o.textContent=b.nombre;
+   sel.appendChild(o);
+ });
+ sel.onchange=()=>{barrioActual=sel.value;renderLotes()}
+ barrioActual=0;
+ renderLotes();
+}
+
+function renderLotes(){
+ const cont=document.getElementById('lotesList');
+ cont.innerHTML='';
+ DATA[barrioActual].lotes.forEach((l,i)=>{
+  const d=document.createElement('div');d.className='lote';
+  d.innerHTML=`Lote ${l.numero} - $${l.precio} <button onclick="editar(${i})">Editar</button>`;
+  cont.appendChild(d);
+ });
+}
+
+function editar(i){
+ const l=DATA[barrioActual].lotes[i];
+ document.getElementById('loteIndex').value=i;
+ numero.value=l.numero;
+ metros.value=l.metros;
+ precio.value=l.precio;
+ financiacion.value=l.financiacion;
+ estado.value=l.estado;
+}
+
+loteForm.onsubmit=e=>{
+ e.preventDefault();
+ const i=loteIndex.value;
+ const l=DATA[barrioActual].lotes[i];
+ l.numero=numero.value;
+ l.metros=metros.value;
+ l.precio=precio.value;
+ l.financiacion=financiacion.value;
+ l.estado=estado.value;
+ renderLotes();
+ alert('Lote actualizado');
+}
+
+function exportar(){
+ const contenido = 'const BARRIOS = ' + JSON.stringify(DATA,null,2);
+ const blob = new Blob([contenido],{type:'application/javascript'});
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);
+ a.download='data.js';
+ a.click();
+}
+</script>
+</body>
+</html>

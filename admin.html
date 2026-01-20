@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de administración</title>
+
+<style>
+body{font-family:Arial,Helvetica,sans-serif;background:#f4f6f9;margin:0;padding:20px}
+h1{margin-bottom:10px}
+section{background:#fff;padding:15px;border-radius:10px;margin-bottom:20px;box-shadow:0 4px 10px rgba(0,0,0,.08)}
+label{display:block;margin-top:10px}
+input,select,button,textarea{padding:8px;margin-top:5px;width:100%}
+button{cursor:pointer;background:#0d2b45;color:#fff;border:none;border-radius:6px}
+.listado li{margin:4px 0}
+.listado button{width:auto;margin-left:8px;background:#c0392b}
+#mapaBox{position:relative;margin-top:10px;border:1px solid #ccc;max-width:800px}
+#mapaBox img{width:100%;display:block}
+.point{position:absolute;width:12px;height:12px;border-radius:50%;border:2px solid #fff;transform:translate(-50%,-50%);box-shadow:0 0 0 2px rgba(0,0,0,.2)}
+.Disponible{background:#2ecc71}
+.Reservado{background:#f1c40f}
+.Vendido{background:#e74c3c}
+.preview{opacity:.7}
+</style>
+</head>
+
+<body>
+
+<h1>Panel de administración</h1>
+
+<section>
+<h3>Agregar barrio</h3>
+<label>Nombre</label>
+<input id="bNombre">
+
+<label>Descripción</label>
+<input id="bDesc">
+
+<label>Imagen del mapa</label>
+<input id="bImg" placeholder="ej: mapa.jpg">
+
+<button onclick="agregarBarrio()">Agregar barrio</button>
+</section>
+
+<section>
+<h3>Barrios cargados</h3>
+<ul id="listaBarrios" class="listado"></ul>
+</section>
+
+<section>
+<h3>Agregar / editar lote</h3>
+
+<label>Barrio</label>
+<select id="selBarrio" onchange="cargarMapa()"></select>
+
+<label>Número</label>
+<input id="lNum">
+
+<label>Metros</label>
+<input id="lMetros">
+
+<label>Precio</label>
+<input id="lPrecio">
+
+<label>Financiación</label>
+<input id="lFin">
+
+<label>Imagen del lote</label>
+<input id="lImg" placeholder="ej: lote1.jpg">
+
+<label>Estado</label>
+<select id="lEstado" onchange="mostrarPreview()">
+<option>Disponible</option>
+<option>Reservado</option>
+<option>Vendido</option>
+</select>
+
+<p>Click en el mapa para ubicar el lote:</p>
+<div id="mapaBox"></div>
+
+<button onclick="guardarLote()">Guardar lote</button>
+</section>
+
+<section>
+<h3>Lotes del barrio</h3>
+<ul id="listaLotes" class="listado"></ul>
+</section>
+
+<section>
+<h3>Exportar data.js</h3>
+<button onclick="generarData()">Generar</button>
+<textarea id="outputData" style="height:250px;font-family:monospace"></textarea>
+</section>
+
+<script src="data.js"></script>
+
+<script>
+let BARRIOS = window.BARRIOS ? JSON.parse(JSON.stringify(window.BARRIOS)) : [];
+
+let clickX=null, clickY=null;
+let editIndex=null;
+
+function agregarBarrio(){
+
+ if(!bNombre.value.trim()){
+   alert("Ingresá un nombre para el barrio");
+   return;
+ }
+
+ if(!bImg.value.trim()){
+   alert("Ingresá la imagen del mapa");
+   return;
+ }
+
+ const b={
+  id:Date.now(),
+  nombre:bNombre.value.trim(),
+  descripcion:bDesc.value.trim(),
+  imagenMapa:bImg.value.trim(),
+  lotes:[]
+ };
+
+ BARRIOS.push(b);
+
+ bNombre.value='';
+ bDesc.value='';
+ bImg.value='';
+
+ refrescar();
+
+ selBarrio.value = BARRIOS.length - 1;
+ cargarMapa();
+}
+
+function borrarBarrio(i){
+ if(!confirm("¿Eliminar este barrio?")) return;
+ BARRIOS.splice(i,1);
+ refrescar();
+}
+
+function refrescar(){
+ actualizarSelect();
+ listarBarrios();
+ listarLotes();
+ dibujarLotes();
+}
+
+function actualizarSelect(){
+ selBarrio.innerHTML='';
+
+ if(BARRIOS.length === 0){
+   const o=document.createElement('option');
+   o.textContent="(sin barrios)";
+   o.value="";
+   selBarrio.appendChild(o);
+   mapaBox.innerHTML='';
+   listaLotes.innerHTML='';
+   return;
+ }
+
+ BARRIOS.forEach((b,i)=>{
+  const o=document.createElement('option');
+  o.value=i;
+  o.textContent=b.nombre;
+  selBarrio.appendChild(o);
+ });
+
+ cargarMapa();
+}
+
+function listarBarrios(){
+ listaBarrios.innerHTML='';
+ BARRIOS.forEach((b,i)=>{
+  const li=document.createElement('li');
+  li.innerHTML=`${b.nombre} <button onclick="borrarBarrio(${i})">Eliminar</button>`;
+  listaBarrios.appendChild(li);
+ });
+}
+
+function cargarMapa(){
+
+ if(BARRIOS.length === 0) return;
+
+ mapaBox.innerHTML='';
+ const b=BARRIOS[selBarrio.value];
+ if(!b) return;
+
+ const img=document.createElement('img');
+ img.src=b.imagenMapa;
+ mapaBox.appendChild(img);
+
+ img.onload=()=>{
+  mapaBox.onclick=e=>{
+   const r=img.getBoundingClientRect();
+   clickX=((e.clientX-r.left)/r.width)*100;
+   clickY=((e.clientY-r.top)/r.height)*100;
+   mostrarPreview();
+  }
+ }
+
+ dibujarLotes();
+ listarLotes();
+}
+
+function mostrarPreview(){
+ mapaBox.querySelectorAll('.preview').forEach(p=>p.remove());
+ if(clickX==null) return;
+
+ const p=document.createElement('div');
+ p.className='point preview '+lEstado.value;
+ p.style.left=clickX+'%';
+ p.style.top=clickY+'%';
+ mapaBox.appendChild(p);
+}
+
+function guardarLote(){
+ const b=BARRIOS[selBarrio.value];
+ if(!b){alert('Creá un barrio primero');return;}
+
+ if(clickX===null){
+   alert("Hacé click en el mapa para ubicar el lote");
+   return;
+ }
+
+ const data={
+  numero:lNum.value,
+  metros:lMetros.value,
+  precio:lPrecio.value,
+  financiacion:lFin.value||null,
+  imagen:lImg.value||null,
+  estado:lEstado.value,
+  x:clickX,
+  y:clickY
+ };
+
+ if(editIndex===null) b.lotes.push(data);
+ else{
+  b.lotes[editIndex]=data;
+  editIndex=null;
+ }
+
+ limpiar();
+ refrescar();
+}
+
+function limpiar(){
+ lNum.value=lMetros.value=lPrecio.value=lFin.value=lImg.value='';
+ clickX=clickY=null;
+}
+
+function dibujarLotes(){
+ mapaBox.querySelectorAll('.point:not(.preview)').forEach(p=>p.remove());
+ const b=BARRIOS[selBarrio.value];
+ if(!b) return;
+
+ b.lotes.forEach(l=>{
+  const p=document.createElement('div');
+  p.className='point '+l.estado;
+  p.style.left=l.x+'%';
+  p.style.top=l.y+'%';
+  mapaBox.appendChild(p);
+ });
+}
+
+function listarLotes(){
+ listaLotes.innerHTML='';
+ const b=BARRIOS[selBarrio.value];
+ if(!b) return;
+
+ b.lotes.forEach((l,i)=>{
+  const li=document.createElement('li');
+  li.innerHTML=`Lote ${l.numero} - ${l.precio}
+  <button onclick="editarLote(${i})">Editar</button>
+  <button onclick="borrarLote(${i})">Eliminar</button>`;
+  listaLotes.appendChild(li);
+ });
+}
+
+function editarLote(i){
+ const b=BARRIOS[selBarrio.value];
+ const l=b.lotes[i];
+
+ lNum.value=l.numero;
+ lMetros.value=l.metros;
+ lPrecio.value=l.precio;
+ lFin.value=l.financiacion||'';
+ lImg.value=l.imagen||'';
+ lEstado.value=l.estado;
+
+ clickX=l.x;
+ clickY=l.y;
+ editIndex=i;
+
+ mostrarPreview();
+}
+
+function borrarLote(i){
+ const b=BARRIOS[selBarrio.value];
+ b.lotes.splice(i,1);
+ refrescar();
+}
+
+function generarData(){
+ outputData.value='const BARRIOS = '+JSON.stringify(BARRIOS,null,2)+';';
+}
+
+refrescar();
+</script>
+
+</body>
+</html>
